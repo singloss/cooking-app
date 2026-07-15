@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}菜谱库 - 大厨做菜{% endblock %}
+{% block top_right %}{% if q %}<span class="top-action">{{ results|length }} 个结果</span>{% endif %}{% endblock %}
+{% block content %}
+<form class="search-bar" action="{{ url_for('recipes') }}" method="get">
+  <span class="search-icon">🔍</span>
+  <input type="search" name="q" value="{{ q }}" placeholder="搜索菜名、食材、描述…" autocomplete="off">
+</form>
+{% if q %}
+<div class="section-header"><h2 class="section-title">搜索结果</h2></div>
+{% if results %}
+<div class="recipe-list">
+{% for recipe in results %}
+<a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}" class="recipe-item">
+  <div class="recipe-item-left">
+    <div class="recipe-item-name">{{ recipe.name }}</div>
+    <div class="recipe-item-meta">{{ recipe.difficulty }} · {{ recipe.prep_time }}</div>
+  </div>
+  <span class="recipe-item-arrow">›</span>
+</a>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">🔎</div>
+  <div class="empty-title">未找到相关菜谱</div>
+  <div class="empty-desc">试试其他关键词，如「豆腐」「意面」</div>
+</div>
+{% endif %}
+{% else %}
+<p class="region-label">国内菜系</p>
+<div class="cuisine-grid">
+{% for cuisine in domestic %}
+<a href="{{ url_for('cuisine_detail', cuisine_id=cuisine.id) }}" class="cuisine-card">
+  <span class="cuisine-emoji">{{ cuisine.emoji }}</span>
+  <span class="cuisine-name">{{ cuisine.name }}</span>
+  <span class="cuisine-desc">{{ cuisine.description }}</span>
+  <span class="cuisine-count">{{ cuisine_recipe_count(cuisine.id) }} 道菜</span>
+</a>
+{% endfor %}
+</div>
+<p class="region-label">国外菜系</p>
+<div class="cuisine-grid">
+{% for cuisine in foreign %}
+<a href="{{ url_for('cuisine_detail', cuisine_id=cuisine.id) }}" class="cuisine-card">
+  <span class="cuisine-emoji">{{ cuisine.emoji }}</span>
+  <span class="cuisine-name">{{ cuisine.name }}</span>
+  <span class="cuisine-desc">{{ cuisine.description }}</span>
+  <span class="cuisine-count">{{ cuisine_recipe_count(cuisine.id) }} 道菜</span>
+</a>
+{% endfor %}
+</div>
+{% endif %}
+{% endblock %}

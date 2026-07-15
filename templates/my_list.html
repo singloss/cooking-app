@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}我的菜谱 - 大厨做菜{% endblock %}
+{% block top_right %}<a href="{{ url_for('my_recipe_new') }}" class="top-action">+ 新建</a>{% endblock %}
+{% block content %}
+<div class="section-header">
+  <h2 class="section-title">我的菜谱</h2>
+  <span class="section-link">{{ recipes|length }} 道</span>
+</div>
+{% if recipes %}
+<div class="recipe-list">
+{% for recipe in recipes %}
+<div class="recipe-item my-recipe-item">
+  <a href="{{ url_for('recipe_detail', recipe_id=recipe.id, custom=1) }}" class="recipe-item-link">
+    <div class="recipe-item-left">
+      <div class="recipe-item-name">{{ recipe.name }}</div>
+      <div class="recipe-item-meta">{{ recipe.difficulty }} · {{ recipe.prep_time }} · {{ recipe.steps|length }} 步</div>
+    </div>
+    <span class="recipe-item-arrow">›</span>
+  </a>
+  <div class="my-recipe-actions">
+    <a href="{{ url_for('my_recipe_edit', recipe_id=recipe.id) }}" class="btn btn-sm btn-outline">编辑</a>
+    <form action="{{ url_for('my_recipe_delete', recipe_id=recipe.id) }}" method="post" onsubmit="return confirm('确定删除「{{ recipe.name }}」？')">
+      <button type="submit" class="btn btn-sm btn-danger">删除</button>
+    </form>
+  </div>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">📝</div>
+  <div class="empty-title">还没有菜谱</div>
+  <div class="empty-desc">记录你的拿手好菜，随时查看制作步骤</div>
+  <a href="{{ url_for('my_recipe_new') }}" class="btn btn-primary">+ 新建菜谱</a>
+</div>
+{% endif %}
+{% endblock %}

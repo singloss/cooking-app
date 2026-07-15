@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}大厨做菜 - 首页{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="hero-badge">👨‍🍳 手机也能轻松跟着做</div>
+  <h1 class="hero-title">今天想做什么菜？</h1>
+  <p class="hero-sub">精选 {{ recipe_count }} 道中外经典菜谱，分步计时，厨房小白也能上手</p>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-num"><span>{{ recipe_count }}</span>+</div>
+      <div class="stat-label">精选菜谱</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num"><span>{{ cuisine_count }}</span></div>
+      <div class="stat-label">菜系分类</div>
+    </div>
+  </div>
+
+  <div class="quick-grid">
+    <a href="{{ url_for('recipes') }}" class="quick-card quick-card-primary">
+      <span class="quick-card-icon">📖</span>
+      <span class="quick-card-title">浏览菜谱</span>
+      <span class="quick-card-desc">国内 {{ cuisine_count // 2 }}+ · 国外 {{ cuisine_count // 2 }}+ 菜系</span>
+    </a>
+    <a href="{{ url_for('my_recipes') }}" class="quick-card">
+      <span class="quick-card-icon">📝</span>
+      <span class="quick-card-title">我的菜谱</span>
+      <span class="quick-card-desc">记录私房拿手菜</span>
+    </a>
+  </div>
+</section>
+
+<section>
+  <div class="section-header">
+    <h2 class="section-title">今日推荐</h2>
+    <a href="{{ url_for('recipes') }}" class="section-link">全部 →</a>
+  </div>
+  <div class="scroll-row">
+    {% for item in featured %}
+    <a href="{{ url_for('recipe_detail', recipe_id=item.recipe.id) }}" class="featured-card">
+      <div class="featured-emoji">{{ item.emoji }}</div>
+      <div class="featured-name">{{ item.recipe.name }}</div>
+      <div class="featured-meta">{{ item.recipe.difficulty }} · {{ item.recipe.prep_time }}</div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section-spaced">
+  <div class="section-header">
+    <h2 class="section-title">快速搜索</h2>
+  </div>
+  <form class="search-bar" action="{{ url_for('recipes') }}" method="get">
+    <span class="search-icon">🔍</span>
+    <input type="search" name="q" placeholder="搜索菜名、食材…" autocomplete="off" enterkeyhint="search">
+  </form>
+  <div class="filter-chips">
+    <a href="{{ url_for('recipes', q='豆腐') }}" class="chip">豆腐</a>
+    <a href="{{ url_for('recipes', q='鸡') }}" class="chip">鸡肉</a>
+    <a href="{{ url_for('recipes', q='面') }}" class="chip">面食</a>
+    <a href="{{ url_for('recipes', q='汤') }}" class="chip">汤羹</a>
+    <a href="{{ url_for('recipes', q='简单') }}" class="chip">快手菜</a>
+  </div>
+</section>
+{% endblock %}

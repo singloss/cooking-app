@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ cuisine.name }} - 大厨做菜{% endblock %}
+{% block top_left %}<a href="{{ url_for('recipes') }}" class="back-link">‹ 菜系</a>{% endblock %}
+{% block top_right %}<span class="top-action">{{ recipes|length }} 道</span>{% endblock %}
+{% block content %}
+<div class="cuisine-hero">
+  <span class="cuisine-hero-emoji">{{ cuisine.emoji }}</span>
+  <h1 class="detail-title">{{ cuisine.name }}</h1>
+  <p class="detail-desc">{{ cuisine.description }}</p>
+  <div class="detail-meta">
+    <span class="tag">{{ cuisine.region }}</span>
+    <span class="tag tag-accent">{{ recipes|length }} 道菜谱</span>
+  </div>
+</div>
+{% if recipes %}
+<div class="recipe-list">
+{% for recipe in recipes %}
+<a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}" class="recipe-item">
+  <div class="recipe-item-left">
+    <div class="recipe-item-name">{{ recipe.name }}</div>
+    <div class="recipe-item-meta">{{ recipe.difficulty }} · {{ recipe.prep_time }} · {{ recipe.steps|length }} 步</div>
+  </div>
+  <span class="recipe-item-arrow">›</span>
+</a>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state"><div class="empty-icon">{{ cuisine.emoji }}</div><div class="empty-title">暂无菜谱</div></div>
+{% endif %}
+{% endblock %}

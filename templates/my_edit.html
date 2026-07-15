@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}{% if recipe %}编辑{% else %}新建{% endif %}菜谱 - 大厨做菜{% endblock %}
+{% block top_left %}<a href="{{ url_for('my_recipes') }}" class="back-link">‹ 返回</a>{% endblock %}
+{% block content %}
+<h1 class="detail-title page-title">{% if recipe %}编辑{% else %}新建{% endif %}菜谱</h1>
+{% if recipe %}
+<form method="post" class="edit-form">
+  <div class="form-group">
+    <label class="form-label">菜名 *</label>
+    <input type="text" name="name" class="form-input" value="{{ recipe.name }}" required placeholder="例如：红烧肉">
+  </div>
+  <div class="form-group">
+    <label class="form-label">简介</label>
+    <textarea name="description" class="form-textarea" placeholder="简单描述这道菜的特点">{{ recipe.description }}</textarea>
+  </div>
+  <div class="form-row-2">
+    <div class="form-group">
+      <label class="form-label">难度</label>
+      <select name="difficulty" class="form-select">
+        {% for d in ['简单', '中等', '困难'] %}
+        <option value="{{ d }}" {% if recipe.difficulty == d %}selected{% endif %}>{{ d }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">准备时间</label>
+      <input type="text" name="prep_time" class="form-input" value="{{ recipe.prep_time }}" placeholder="30分钟">
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">食材 *</label>
+    <div id="ingredient-list">
+    {% for ing in recipe.ingredients %}
+      <div class="dynamic-row">
+        <input type="text" name="ingredient" class="form-input" value="{{ ing }}" placeholder="食材名称及用量">
+        <button type="button" class="btn-remove" aria-label="删除">✕</button>
+      </div>
+    {% endfor %}
+    </div>
+    <button type="button" class="btn-add-row" data-add-ingredient>+ 添加食材</button>
+  </div>
+  <div class="form-group">
+    <label class="form-label">步骤 *</label>
+    <div id="step-list">
+    {% for step in recipe.steps %}
+      <div class="dynamic-row-step">
+        <input type="text" name="step_desc" class="form-input" value="{{ step.description }}" placeholder="步骤描述">
+        <div class="step-dur-row">
+          <span class="form-label" style="margin:0">计时(分)</span>
+          <input type="number" name="step_dur" class="form-input dur-input" value="{{ step.duration_minutes }}" min="0">
+          <button type="button" class="btn-remove" aria-label="删除">✕</button>
+        </div>
+      </div>
+    {% endfor %}
+    </div>
+    <button type="button" class="btn-add-row" data-add-step>+ 添加步骤</button>
+  </div>
+  <button type="submit" class="btn btn-primary btn-block sticky-save">保存菜谱</button>
+</form>
+{% else %}
+<form method="post" class="edit-form">
+  <div class="form-group">
+    <label class="form-label">菜名 *</label>
+    <input type="text" name="name" class="form-input" required placeholder="给你的菜谱起个名字">
+  </div>
+  <button type="submit" class="btn btn-primary btn-block">创建并继续编辑</button>
+</form>
+{% endif %}
+{% endblock %}

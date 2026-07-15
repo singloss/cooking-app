@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ recipe.name }} - 大厨做菜{% endblock %}
+{% block top_left %}<a href="{{ back_url }}" class="back-link">‹ 返回</a>{% endblock %}
+{% block content %}
+<div class="detail-header">
+  <div class="detail-hero-badge">{% if cuisine %}{{ cuisine.emoji }}{% else %}🍽️{% endif %}</div>
+  <h1 class="detail-title">{{ recipe.name }}</h1>
+  <div class="detail-meta">
+    <span class="tag tag-accent">{{ recipe.difficulty }}</span>
+    <span class="tag">⏱ {{ recipe.prep_time }}</span>
+    <span class="tag">{{ recipe.steps|length }} 个步骤</span>
+    {% if cuisine %}<span class="tag">{{ cuisine.name }}</span>{% endif %}
+    {% if is_custom %}<span class="tag">我的菜谱</span>{% endif %}
+  </div>
+  {% if recipe.description %}<p class="detail-desc">{{ recipe.description }}</p>{% endif %}
+</div>
+<section class="detail-section">
+  <h2 class="section-title">食材清单</h2>
+  <ul class="ingredient-list">
+  {% for ing in recipe.ingredients %}{% if ing.strip() %}<li>{{ ing }}</li>{% endif %}{% endfor %}
+  </ul>
+</section>
+<section class="detail-section">
+  <h2 class="section-title">制作步骤</h2>
+  {% for step in recipe.steps %}
+  <article class="step-card">
+    <div class="step-header">
+      <span class="step-num">{{ step.order }}</span>
+      <p class="step-desc">{{ step.description }}</p>
+    </div>
+    {% if step.duration_minutes > 0 %}
+    <div class="step-timer timer-block" data-seconds="{{ step.duration_minutes * 60 }}">
+      <span class="timer-hint">建议计时 {{ step.duration_minutes }} 分钟</span>
+      <span class="timer-display">00:00</span>
+      <div class="timer-btns">
+        <button type="button" class="btn-timer btn-timer-primary btn-start">开始</button>
+        <button type="button" class="btn-timer btn-pause">暂停</button>
+        <button type="button" class="btn-timer btn-reset">重置</button>
+      </div>
+    </div>
+    {% endif %}
+  </article>
+  {% endfor %}
+</section>
+{% if is_custom %}
+<div class="btn-row" style="margin-top:24px">
+  <a href="{{ url_for('my_recipe_edit', recipe_id=recipe.id) }}" class="btn btn-outline btn-block">编辑菜谱</a>
+</div>
+{% endif %}
+{% endblock %}

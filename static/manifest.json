@@ -1,0 +1,20 @@
+{
+  "name": "大厨做菜",
+  "short_name": "大厨做菜",
+  "description": "精选中外菜谱，分步计时，手机轻松跟着做",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "/static/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
