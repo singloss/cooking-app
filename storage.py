@@ -2,12 +2,18 @@
 from __future__ import annotations
 
 import json
+import os
 import uuid
 from pathlib import Path
 
 from models import Recipe, Step
 
-DATA_DIR = Path(__file__).parent / "data"
+
+class StorageError(Exception):
+    """保存或读取菜谱数据失败"""
+
+
+DATA_DIR = Path(os.environ.get("DATA_DIR", Path(__file__).parent / "data"))
 MY_RECIPES_FILE = DATA_DIR / "my_recipes.json"
 
 
@@ -31,8 +37,14 @@ def _load_raw() -> list[dict]:
 
 def _save_raw(recipes: list[dict]) -> None:
     _ensure_data_dir()
-    with open(MY_RECIPES_FILE, "w", encoding="utf-8") as f:
-        json.dump(recipes, f, ensure_ascii=False, indent=2)
+    tmp = MY_RECIPES_FILE.with_suffix(".tmp")
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(recipes, f, ensure_ascii=False, indent=2)
+        tmp.replace(MY_RECIPES_FILE)
+    except OSError as exc:
+        tmp.unlink(missing_ok=True)
+        raise StorageError(f"无法写入菜谱文件: {exc}") from exc
 
 
 def load_my_recipes() -> list[Recipe]:
@@ -71,7 +83,7 @@ def create_empty_recipe(name: str = "新菜谱", cuisine: str = "custom") -> Rec
         cuisine=cuisine,
         description="",
         ingredients=[""],
-        steps=[Step(order=1, description="", duration_minutes=0)],
+        steps=[Step(order=1, description="", duration_minutes=5)],
         difficulty="中等",
         prep_time="30分钟",
         is_custom=True,

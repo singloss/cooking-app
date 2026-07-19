@@ -40,7 +40,7 @@
     <button type="button" class="btn-add-row" data-add-ingredient>+ 添加食材</button>
   </div>
   <div class="form-group">
-    <label class="form-label">步骤 *</label>
+    <label class="form-label">步骤 * <span class="form-hint">「计时(分)」填大于 0 的数字，详情页即可计时</span></label>
     <div id="step-list">
     {% for step in recipe.steps %}
       <div class="dynamic-row-step">

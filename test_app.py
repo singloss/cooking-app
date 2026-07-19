@@ -108,6 +108,13 @@ class TestStorage(unittest.TestCase):
         storage.MY_RECIPES_FILE.write_text("{bad json", encoding="utf-8")
         self.assertEqual(storage.load_my_recipes(), [])
 
+    def test_atomic_save(self) -> None:
+        recipe = storage.create_empty_recipe("原子测试")
+        storage.save_my_recipe(recipe)
+        self.assertTrue(storage.MY_RECIPES_FILE.exists())
+        data = storage.MY_RECIPES_FILE.read_text(encoding="utf-8")
+        self.assertIn("原子测试", data)
+
 
 class TestWebRecipeFlow(unittest.TestCase):
     def setUp(self) -> None:
