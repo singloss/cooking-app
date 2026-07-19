@@ -8,9 +8,9 @@
   <span class="section-link">{{ recipes|length }} 道</span>
 </div>
 {% if recipes %}
-<div class="recipe-list">
+<div class="recipe-list" id="my-recipe-list">
 {% for recipe in recipes %}
-<div class="recipe-item my-recipe-item">
+<div class="recipe-item my-recipe-item" data-recipe-id="{{ recipe.id }}">
   <a href="{{ url_for('recipe_detail', recipe_id=recipe.id, custom=1) }}" class="recipe-item-link">
     <div class="recipe-item-left">
       <div class="recipe-item-name">{{ recipe.name }}</div>
@@ -28,7 +28,8 @@
 {% endfor %}
 </div>
 {% else %}
-<div class="empty-state">
+<div class="recipe-list" id="my-recipe-list" hidden></div>
+<div class="empty-state" id="my-recipe-empty">
   <div class="empty-icon">📝</div>
   <div class="empty-title">还没有菜谱</div>
   <div class="empty-desc">记录你的拿手好菜，随时查看制作步骤</div>

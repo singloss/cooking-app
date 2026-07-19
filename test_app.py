@@ -174,6 +174,25 @@ class TestWebRecipeFlow(unittest.TestCase):
         self.assertIn("step-timer", html)
         self.assertIn('data-seconds="480"', html)
 
+    def test_done_redirects_to_my_list(self) -> None:
+        r = self.client.post("/my/new", data={"name": "完成测试"}, follow_redirects=False)
+        rid = r.headers["Location"].split("/")[-2]
+        r2 = self.client.post(
+            f"/my/{rid}/edit",
+            data={
+                "name": "完成测试",
+                "description": "",
+                "difficulty": "中等",
+                "prep_time": "30分钟",
+                "ingredient": "盐 适量",
+                "step_desc": "混合",
+                "step_dur": "3",
+                "action": "done",
+            },
+            follow_redirects=False,
+        )
+        self.assertEqual(r2.status_code, 302)
+        self.assertIn("/my", r2.headers["Location"])
 
     def test_api_sync_recipe(self) -> None:
         recipe = storage.create_empty_recipe("同步测试")

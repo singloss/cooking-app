@@ -222,12 +222,16 @@ def my_recipe_edit(recipe_id):
             return render_template("my_edit.html", recipe=draft)
         draft.ingredients = ingredients
         draft.steps = steps
+        action = request.form.get("action", "save")
         try:
             save_my_recipe(draft)
+            flash("菜谱已保存", "success")
         except StorageError:
-            flash("保存失败，请稍后重试", "error")
-            return render_template("my_edit.html", recipe=draft)
-        flash("菜谱已保存", "success")
+            flash("云端暂不可用，已依赖本机备份（请在浏览器中保存）", "error")
+            if action != "done":
+                return render_template("my_edit.html", recipe=draft)
+        if action == "done":
+            return redirect(url_for("my_recipes"))
         return redirect(url_for("recipe_detail", recipe_id=draft.id, custom=1))
     return render_template("my_edit.html", recipe=recipe)
 

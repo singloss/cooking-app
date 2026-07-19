@@ -188,6 +188,105 @@
     });
   }
 
+  function collectRecipeFromForm(form) {
+    if (!form) return null;
+    var id = form.dataset.recipeId;
+    if (!id) return null;
+    var nameEl = form.querySelector('[name="name"]');
+    var descEl = form.querySelector('[name="description"]');
+    var diffEl = form.querySelector('[name="difficulty"]');
+    var prepEl = form.querySelector('[name="prep_time"]');
+    var ingredients = [];
+    form.querySelectorAll('[name="ingredient"]').forEach(function (el) {
+      var v = el.value.trim();
+      if (v) ingredients.push(v);
+    });
+    var steps = [];
+    var descs = form.querySelectorAll('[name="step_desc"]');
+    var durs = form.querySelectorAll('[name="step_dur"]');
+    descs.forEach(function (el, i) {
+      var desc = el.value.trim();
+      if (!desc) return;
+      var dur = 0;
+      if (durs[i]) {
+        dur = parseInt(durs[i].value, 10);
+        if (isNaN(dur) || dur < 0) dur = 0;
+      }
+      steps.push({ order: steps.length + 1, description: desc, duration_minutes: dur });
+    });
+    return {
+      id: id,
+      name: nameEl ? nameEl.value.trim() : "",
+      cuisine: "custom",
+      description: descEl ? descEl.value.trim() : "",
+      ingredients: ingredients.length ? ingredients : [""],
+      steps: steps.length ? steps : [{ order: 1, description: "", duration_minutes: 5 }],
+      difficulty: diffEl ? (diffEl.value || "中等") : "中等",
+      prep_time: prepEl ? (prepEl.value || "30分钟") : "30分钟",
+      is_custom: true,
+    };
+  }
+
+  function bindEditFormLocalSave() {
+    var form = document.getElementById("edit-recipe-form");
+    if (!form) return;
+    form.addEventListener("submit", function () {
+      var recipe = collectRecipeFromForm(form);
+      if (recipe && recipe.name) upsertLocalRecipe(recipe);
+    });
+  }
+
+  function createMyRecipeRow(recipe) {
+    var wrap = document.createElement("div");
+    wrap.className = "recipe-item my-recipe-item";
+    wrap.dataset.localRecipe = recipe.id;
+    var stepCount = (recipe.steps && recipe.steps.length) || 0;
+    var meta = (recipe.difficulty || "中等") + " · " + (recipe.prep_time || "30分钟") + " · " + stepCount + " 步";
+    wrap.innerHTML =
+      '<a href="/recipe/' + recipe.id + '?custom=1" class="recipe-item-link">' +
+      '<div class="recipe-item-left"><div class="recipe-item-name"></div>' +
+      '<div class="recipe-item-meta"></div></div><span class="recipe-item-arrow">›</span></a>' +
+      '<div class="my-recipe-actions">' +
+      '<a href="/my/' + recipe.id + '/edit" class="btn btn-sm btn-outline">编辑</a>' +
+      '<form action="/my/' + recipe.id + '/delete" method="post">' +
+      '<button type="submit" class="btn btn-sm btn-danger">删除</button></form></div>';
+    wrap.querySelector(".recipe-item-name").textContent = recipe.name || "未命名";
+    wrap.querySelector(".recipe-item-meta").textContent = meta;
+    var delForm = wrap.querySelector("form");
+    delForm.addEventListener("submit", function (e) {
+      if (!confirm("确定删除「" + (recipe.name || "未命名") + "」？")) {
+        e.preventDefault();
+        return;
+      }
+      removeLocalRecipe(recipe.id);
+    });
+    return wrap;
+  }
+
+  function mergeLocalRecipesIntoList() {
+    var list = document.getElementById("my-recipe-list");
+    var empty = document.getElementById("my-recipe-empty");
+    var idsNode = document.getElementById("server-recipe-ids");
+    if (!list || !idsNode) return;
+    var serverIds = [];
+    try {
+      serverIds = JSON.parse(idsNode.textContent || "[]");
+    } catch (e) { /* noop */ }
+    var added = 0;
+    readLocalRecipes().forEach(function (recipe) {
+      if (!recipe.id || serverIds.indexOf(recipe.id) >= 0) return;
+      list.appendChild(createMyRecipeRow(recipe));
+      serverIds.push(recipe.id);
+      added += 1;
+    });
+    if (added > 0) {
+      list.hidden = false;
+      if (empty) empty.hidden = true;
+      var countEl = document.querySelector(".section-link");
+      if (countEl) countEl.textContent = list.querySelectorAll(".my-recipe-item").length + " 道";
+    }
+  }
+
   function bindDynamicForms() {
     function bindRemove(row, list, selector) {
       var btn = row.querySelector(".btn-remove");
@@ -240,9 +339,21 @@
     }
   }
 
+  function bindMyRecipeDelete() {
+    document.querySelectorAll(".my-recipe-item form").forEach(function (form) {
+      form.addEventListener("submit", function () {
+        var id = form.closest(".my-recipe-item")?.dataset.recipeId;
+        if (id) removeLocalRecipe(id);
+      });
+    });
+  }
+
   bindDynamicForms();
+  bindEditFormLocalSave();
+  bindMyRecipeDelete();
   backupRecipeFromPage();
   restoreLocalRecipesToServer();
+  mergeLocalRecipesIntoList();
 
   document.querySelectorAll(".flash").forEach(function (el) {
     setTimeout(function () {

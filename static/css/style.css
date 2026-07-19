@@ -671,6 +671,29 @@ button, input, textarea, select { font: inherit; color: inherit; }
   background: linear-gradient(to top, var(--white) 70%, transparent);
 }
 
+.edit-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 10px;
+}
+
+.form-save-hint {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+  text-align: center;
+}
+
+.top-action-primary {
+  font-weight: 700;
+  padding: 8px 14px;
+  border: 1px solid var(--text);
+  border-radius: 20px;
+  background: var(--text);
+  color: var(--white);
+}
+
 .empty-state { text-align: center; padding: 48px 20px; }
 .empty-icon { font-size: 44px; margin-bottom: 12px; }
 .empty-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }

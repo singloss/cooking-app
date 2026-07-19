@@ -1,10 +1,15 @@
 {% extends "base.html" %}
 {% block title %}{% if recipe %}编辑{% else %}新建{% endif %}菜谱 - 大厨做菜{% endblock %}
 {% block top_left %}<a href="{{ url_for('my_recipes') }}" class="back-link">‹ 返回</a>{% endblock %}
+{% block top_right %}
+{% if recipe %}
+<button type="submit" form="edit-recipe-form" name="action" value="done" class="top-action top-action-primary">完成</button>
+{% endif %}
+{% endblock %}
 {% block content %}
 <h1 class="detail-title page-title">{% if recipe %}编辑{% else %}新建{% endif %}菜谱</h1>
 {% if recipe %}
-<form method="post" class="edit-form">
+<form method="post" class="edit-form" id="edit-recipe-form" data-recipe-id="{{ recipe.id }}">
   <div class="form-group">
     <label class="form-label">菜名 *</label>
     <input type="text" name="name" class="form-input" value="{{ recipe.name }}" required placeholder="例如：红烧肉">
@@ -55,7 +60,11 @@
     </div>
     <button type="button" class="btn-add-row" data-add-step>+ 添加步骤</button>
   </div>
-  <button type="submit" class="btn btn-primary btn-block sticky-save">保存菜谱</button>
+  <div class="edit-actions sticky-save">
+    <button type="submit" name="action" value="save" class="btn btn-outline btn-block">保存</button>
+    <button type="submit" name="action" value="done" class="btn btn-primary btn-block">完成并退出</button>
+  </div>
+  <p class="form-save-hint">菜谱会同时保存到本机，即使云端暂不可用也能在「我的菜谱」里找到</p>
 </form>
 {% else %}
 <form method="post" class="edit-form">
