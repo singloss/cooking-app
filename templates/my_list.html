@@ -2,6 +2,7 @@
 {% block title %}我的菜谱 - 大厨做菜{% endblock %}
 {% block top_right %}<a href="{{ url_for('my_recipe_new') }}" class="top-action">+ 新建</a>{% endblock %}
 {% block content %}
+<script id="server-recipe-ids" type="application/json">{{ recipes | map(attribute='id') | list | tojson }}</script>
 <div class="section-header">
   <h2 class="section-title">我的菜谱</h2>
   <span class="section-link">{{ recipes|length }} 道</span>

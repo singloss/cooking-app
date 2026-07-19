@@ -109,6 +109,79 @@ class TestStorage(unittest.TestCase):
         self.assertEqual(storage.load_my_recipes(), [])
 
 
+class TestWebRecipeFlow(unittest.TestCase):
+    def setUp(self) -> None:
+        self._tmpdir = tempfile.TemporaryDirectory()
+        storage.MY_RECIPES_FILE = Path(self._tmpdir.name) / "my_recipes.json"
+        storage.DATA_DIR = Path(self._tmpdir.name)
+        self.client = __import__("web_app", fromlist=["app"]).app.test_client()
+
+    def tearDown(self) -> None:
+        storage.MY_RECIPES_FILE = Path(__file__).parent / "data" / "my_recipes.json"
+        storage.DATA_DIR = Path(__file__).parent / "data"
+        self._tmpdir.cleanup()
+
+    def test_validation_keeps_form_data(self) -> None:
+        from web_app import _parse_steps
+
+        steps = _parse_steps(["步骤1", ""], ["10", "5"])
+        self.assertEqual(len(steps), 1)
+        self.assertEqual(steps[0].duration_minutes, 10)
+
+        r = self.client.post("/my/new", data={"name": "保留测试"}, follow_redirects=False)
+        rid = r.headers["Location"].split("/")[-2]
+        r2 = self.client.post(
+            f"/my/{rid}/edit",
+            data={
+                "name": "保留测试",
+                "description": "简介内容",
+                "difficulty": "简单",
+                "prep_time": "20分钟",
+                "ingredient": "",
+                "step_desc": "切菜",
+                "step_dur": "5",
+            },
+        )
+        self.assertIn("请至少添加一项食材", r2.data.decode("utf-8"))
+        self.assertIn("简介内容", r2.data.decode("utf-8"))
+
+    def test_save_redirects_to_detail_with_timer(self) -> None:
+        r = self.client.post("/my/new", data={"name": "计时测试"}, follow_redirects=False)
+        rid = r.headers["Location"].split("/")[-2]
+        r2 = self.client.post(
+            f"/my/{rid}/edit",
+            data={
+                "name": "计时测试",
+                "description": "",
+                "difficulty": "中等",
+                "prep_time": "30分钟",
+                "ingredient": "鸡蛋2个",
+                "step_desc": "水煮",
+                "step_dur": "8",
+            },
+            follow_redirects=False,
+        )
+        self.assertIn(f"/recipe/{rid}?custom=1", r2.headers["Location"])
+        r3 = self.client.get(f"/recipe/{rid}?custom=1")
+        html = r3.data.decode("utf-8")
+        self.assertIn("step-timer", html)
+        self.assertIn('data-seconds="480"', html)
+
+
+    def test_api_sync_recipe(self) -> None:
+        recipe = storage.create_empty_recipe("同步测试")
+        recipe.ingredients = ["盐"]
+        recipe.steps = [Step(1, "煮", 5)]
+        payload = recipe.to_dict()
+        r = self.client.post("/api/my-recipes/sync", json=payload)
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.get_json()["ok"])
+        loaded = storage.get_my_recipe_by_id(recipe.id)
+        self.assertIsNotNone(loaded)
+        assert loaded is not None
+        self.assertEqual(loaded.name, "同步测试")
+
+
 class TestTimerLogic(unittest.TestCase):
     def test_format_time(self) -> None:
         from timer_widget import format_time

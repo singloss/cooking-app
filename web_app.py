@@ -6,7 +6,7 @@ import random
 import socket
 from pathlib import Path
 
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
 from database import (
     BUILTIN_RECIPES,
     CUISINES,
@@ -16,13 +16,45 @@ from database import (
     get_recipes_by_cuisine,
     search_recipes,
 )
+from models import Recipe, Step
 from storage import (
+    StorageError,
     create_empty_recipe,
     delete_my_recipe,
     get_my_recipe_by_id,
     load_my_recipes,
     save_my_recipe,
 )
+
+
+def _parse_steps(descriptions: list[str], durations: list[str]) -> list[Step]:
+    """按行配对步骤描述与计时，避免错位"""
+    steps: list[Step] = []
+    for desc, dur_str in zip(descriptions, durations):
+        desc = desc.strip()
+        if not desc:
+            continue
+        try:
+            duration = max(0, int(str(dur_str).strip() or 0))
+        except ValueError:
+            duration = 0
+        steps.append(Step(order=len(steps) + 1, description=desc, duration_minutes=duration))
+    return steps
+
+
+def _recipe_from_form(recipe: Recipe, form) -> Recipe:
+    """用表单内容更新菜谱草稿（校验失败时回填表单）"""
+    recipe.name = form.get("name", "").strip()
+    recipe.description = form.get("description", "").strip()
+    recipe.difficulty = form.get("difficulty", "中等").strip() or "中等"
+    recipe.prep_time = form.get("prep_time", "30分钟").strip() or "30分钟"
+    recipe.ingredients = [x.strip() for x in form.getlist("ingredient") if x.strip()]
+    if not recipe.ingredients:
+        recipe.ingredients = [""]
+    recipe.steps = _parse_steps(form.getlist("step_desc"), form.getlist("step_dur"))
+    if not recipe.steps:
+        recipe.steps = [Step(order=1, description="", duration_minutes=5)]
+    return recipe
 
 APP_DIR = Path(__file__).parent
 app = Flask(
@@ -146,9 +178,27 @@ def my_recipe_new():
             flash("请填写菜名", "error")
             return render_template("my_edit.html", recipe=None)
         recipe = create_empty_recipe(name)
-        save_my_recipe(recipe)
+        try:
+            save_my_recipe(recipe)
+        except StorageError:
+            flash("服务器暂无法保存，请稍后重试（手机端会自动备份到本地）", "error")
+            return render_template("my_edit.html", recipe=None)
         return redirect(url_for("my_recipe_edit", recipe_id=recipe.id))
     return render_template("my_edit.html", recipe=None)
+
+
+@app.post("/api/my-recipes/sync")
+def api_sync_recipe():
+    data = request.get_json(silent=True)
+    if not data or not data.get("id"):
+        return jsonify({"ok": False, "error": "invalid recipe"}), 400
+    try:
+        recipe = Recipe.from_dict(data)
+        recipe.is_custom = True
+        save_my_recipe(recipe)
+        return jsonify({"ok": True})
+    except (StorageError, KeyError, TypeError, ValueError) as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
 
 
 @app.route("/my/<recipe_id>/edit", methods=["GET", "POST"])
@@ -158,40 +208,27 @@ def my_recipe_edit(recipe_id):
         flash("菜谱不存在", "error")
         return redirect(url_for("my_recipes"))
     if request.method == "POST":
-        from models import Step
-
-        name = request.form.get("name", "").strip()
-        if not name:
+        draft = _recipe_from_form(recipe, request.form)
+        if not draft.name:
             flash("请填写菜名", "error")
-            return render_template("my_edit.html", recipe=recipe)
+            return render_template("my_edit.html", recipe=draft)
         ingredients = [x.strip() for x in request.form.getlist("ingredient") if x.strip()]
-        descriptions = request.form.getlist("step_desc")
-        durations = request.form.getlist("step_dur")
+        steps = _parse_steps(request.form.getlist("step_desc"), request.form.getlist("step_dur"))
         if not ingredients:
             flash("请至少添加一项食材", "error")
-            return render_template("my_edit.html", recipe=recipe)
-        steps = []
-        for i, desc in enumerate(descriptions, start=1):
-            desc = desc.strip()
-            if not desc:
-                continue
-            try:
-                dur = max(0, int(durations[i - 1] or 0))
-            except (ValueError, IndexError):
-                dur = 0
-            steps.append(Step(order=len(steps) + 1, description=desc, duration_minutes=dur))
+            return render_template("my_edit.html", recipe=draft)
         if not steps:
             flash("请至少添加一个步骤", "error")
-            return render_template("my_edit.html", recipe=recipe)
-        recipe.name = name
-        recipe.description = request.form.get("description", "").strip()
-        recipe.difficulty = request.form.get("difficulty", "中等").strip() or "中等"
-        recipe.prep_time = request.form.get("prep_time", "30分钟").strip() or "30分钟"
-        recipe.ingredients = ingredients
-        recipe.steps = steps
-        save_my_recipe(recipe)
+            return render_template("my_edit.html", recipe=draft)
+        draft.ingredients = ingredients
+        draft.steps = steps
+        try:
+            save_my_recipe(draft)
+        except StorageError:
+            flash("保存失败，请稍后重试", "error")
+            return render_template("my_edit.html", recipe=draft)
         flash("菜谱已保存", "success")
-        return redirect(url_for("my_recipes"))
+        return redirect(url_for("recipe_detail", recipe_id=draft.id, custom=1))
     return render_template("my_edit.html", recipe=recipe)
 
 

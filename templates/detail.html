@@ -38,11 +38,26 @@
         <button type="button" class="btn-timer btn-reset">重置</button>
       </div>
     </div>
+    {% else %}
+    <div class="step-timer timer-block timer-custom" data-seconds="0">
+      <span class="timer-hint">未设置计时，输入分钟数后开始</span>
+      <div class="timer-custom-row">
+        <input type="number" class="form-input dur-input timer-custom-min" min="1" placeholder="分钟" inputmode="numeric">
+        <button type="button" class="btn-timer btn-timer-primary btn-apply-duration">设定</button>
+      </div>
+      <span class="timer-display">00:00</span>
+      <div class="timer-btns">
+        <button type="button" class="btn-timer btn-timer-primary btn-start" disabled>开始</button>
+        <button type="button" class="btn-timer btn-pause">暂停</button>
+        <button type="button" class="btn-timer btn-reset">重置</button>
+      </div>
+    </div>
     {% endif %}
   </article>
   {% endfor %}
 </section>
 {% if is_custom %}
+<script id="recipe-backup" type="application/json">{{ recipe.to_dict() | tojson }}</script>
 <div class="btn-row" style="margin-top:24px">
   <a href="{{ url_for('my_recipe_edit', recipe_id=recipe.id) }}" class="btn btn-outline btn-block">编辑菜谱</a>
 </div>
