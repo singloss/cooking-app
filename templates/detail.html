@@ -1,7 +1,8 @@
 {% extends "base.html" %}
-{% block title %}{{ recipe.name }} - 大厨做菜{% endblock %}
+{% block title %}{% if recipe %}{{ recipe.name }}{% else %}我的菜谱{% endif %} - 大厨做菜{% endblock %}
 {% block top_left %}<a href="{{ back_url }}" class="back-link">‹ 返回</a>{% endblock %}
 {% block content %}
+{% if recipe %}
 <div class="detail-header">
   <div class="detail-hero-badge">{% if cuisine %}{{ cuisine.emoji }}{% else %}🍽️{% endif %}</div>
   <h1 class="detail-title">{{ recipe.name }}</h1>
@@ -61,5 +62,8 @@
 <div class="btn-row" style="margin-top:24px">
   <a href="{{ url_for('my_recipe_edit', recipe_id=recipe.id) }}" class="btn btn-outline btn-block">编辑菜谱</a>
 </div>
+{% endif %}
+{% elif local_recipe_id %}
+<div id="local-recipe-mount" data-recipe-id="{{ local_recipe_id }}"></div>
 {% endif %}
 {% endblock %}

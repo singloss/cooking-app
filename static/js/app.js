@@ -124,6 +124,18 @@
     new StepTimer(el);
   });
 
+  function initStepTimers(root) {
+    (root || document).querySelectorAll(".step-timer").forEach(function (el) {
+      if (el.dataset.timerBound) return;
+      el.dataset.timerBound = "1";
+      new StepTimer(el);
+    });
+  }
+
+  function getLocalRecipeById(id) {
+    return readLocalRecipes().find(function (r) { return r.id === id; }) || null;
+  }
+
   function readLocalRecipes() {
     try {
       var raw = localStorage.getItem(LS_KEY);
@@ -232,14 +244,126 @@
     if (!form) return;
     form.addEventListener("submit", function () {
       var recipe = collectRecipeFromForm(form);
-      if (recipe && recipe.name) upsertLocalRecipe(recipe);
+      if (recipe && recipe.name) {
+        upsertLocalRecipe(recipe);
+        syncRecipeToServer(recipe);
+      }
     });
+  }
+
+  function loadLocalRecipeIntoEditForm() {
+    var form = document.getElementById("edit-recipe-form");
+    if (!form) return;
+    var id = form.dataset.recipeId;
+    var localOnly = form.dataset.localOnly === "true";
+    var local = id ? getLocalRecipeById(id) : null;
+    if (!local) return;
+    if (!localOnly && form.querySelector('[name="name"]')?.value.trim()) return;
+    var setVal = function (sel, val) {
+      var el = form.querySelector(sel);
+      if (el) el.value = val || "";
+    };
+    setVal('[name="name"]', local.name);
+    setVal('[name="description"]', local.description);
+    setVal('[name="prep_time"]', local.prep_time);
+    var diffEl = form.querySelector('[name="difficulty"]');
+    if (diffEl && local.difficulty) diffEl.value = local.difficulty;
+    var ingList = document.getElementById("ingredient-list");
+    if (ingList && local.ingredients && local.ingredients.length) {
+      ingList.innerHTML = "";
+      local.ingredients.forEach(function (ing) {
+        var row = document.createElement("div");
+        row.className = "dynamic-row";
+        row.innerHTML = '<input type="text" name="ingredient" class="form-input" placeholder="食材名称及用量">' +
+          '<button type="button" class="btn-remove" aria-label="删除">✕</button>';
+        row.querySelector("input").value = ing;
+        ingList.appendChild(row);
+      });
+    }
+    var stepList = document.getElementById("step-list");
+    if (stepList && local.steps && local.steps.length) {
+      stepList.innerHTML = "";
+      local.steps.forEach(function (step) {
+        var row = document.createElement("div");
+        row.className = "dynamic-row-step";
+        row.innerHTML = '<input type="text" name="step_desc" class="form-input" placeholder="步骤描述">' +
+          '<div class="step-dur-row"><span class="form-label" style="margin:0">计时(分)</span>' +
+          '<input type="number" name="step_dur" class="form-input dur-input" value="5" min="0">' +
+          '<button type="button" class="btn-remove" aria-label="删除">✕</button></div>';
+        row.querySelector('[name="step_desc"]').value = step.description || "";
+        row.querySelector('[name="step_dur"]').value = step.duration_minutes || 0;
+        stepList.appendChild(row);
+      });
+    }
+    bindDynamicForms();
+  }
+
+  function stepTimerHtml(step) {
+    var dur = step.duration_minutes || 0;
+    if (dur > 0) {
+      return '<div class="step-timer timer-block" data-seconds="' + (dur * 60) + '">' +
+        '<span class="timer-hint">建议计时 ' + dur + ' 分钟</span>' +
+        '<span class="timer-display">00:00</span>' +
+        '<div class="timer-btns">' +
+        '<button type="button" class="btn-timer btn-timer-primary btn-start">开始</button>' +
+        '<button type="button" class="btn-timer btn-pause">暂停</button>' +
+        '<button type="button" class="btn-timer btn-reset">重置</button></div></div>';
+    }
+    return '<div class="step-timer timer-block timer-custom" data-seconds="0">' +
+      '<span class="timer-hint">未设置计时，输入分钟数后开始</span>' +
+      '<div class="timer-custom-row">' +
+      '<input type="number" class="form-input dur-input timer-custom-min" min="1" placeholder="分钟" inputmode="numeric">' +
+      '<button type="button" class="btn-timer btn-timer-primary btn-apply-duration">设定</button></div>' +
+      '<span class="timer-display">00:00</span>' +
+      '<div class="timer-btns">' +
+      '<button type="button" class="btn-timer btn-timer-primary btn-start" disabled>开始</button>' +
+      '<button type="button" class="btn-timer btn-pause">暂停</button>' +
+      '<button type="button" class="btn-timer btn-reset">重置</button></div></div>';
+  }
+
+  function mountLocalRecipeDetail() {
+    var mount = document.getElementById("local-recipe-mount");
+    if (!mount) return;
+    var id = mount.dataset.recipeId;
+    var recipe = getLocalRecipeById(id);
+    if (!recipe) {
+      mount.innerHTML = '<div class="empty-state"><div class="empty-icon">📝</div>' +
+        '<div class="empty-title">菜谱未找到</div>' +
+        '<div class="empty-desc">可能尚未保存到本机，请返回编辑后点「完成并退出」</div>' +
+        '<a href="/my" class="btn btn-primary">返回我的菜谱</a></div>';
+      return;
+    }
+    upsertLocalRecipe(recipe);
+    var ingHtml = (recipe.ingredients || []).filter(function (i) { return i && i.trim(); })
+      .map(function (i) { return "<li>" + i + "</li>"; }).join("");
+    var stepsHtml = (recipe.steps || []).map(function (step) {
+      return '<article class="step-card"><div class="step-header">' +
+        '<span class="step-num">' + step.order + '</span>' +
+        '<p class="step-desc">' + step.description + '</p></div>' +
+        stepTimerHtml(step) + '</article>';
+    }).join("");
+    mount.innerHTML =
+      '<div class="detail-header">' +
+      '<div class="detail-hero-badge">🍽️</div>' +
+      '<h1 class="detail-title">' + (recipe.name || "未命名") + '</h1>' +
+      '<div class="detail-meta">' +
+      '<span class="tag tag-accent">' + (recipe.difficulty || "中等") + '</span>' +
+      '<span class="tag">⏱ ' + (recipe.prep_time || "30分钟") + '</span>' +
+      '<span class="tag">我的菜谱</span><span class="tag">本机保存</span></div>' +
+      (recipe.description ? '<p class="detail-desc">' + recipe.description + '</p>' : '') +
+      '</div>' +
+      '<section class="detail-section"><h2 class="section-title">食材清单</h2>' +
+      '<ul class="ingredient-list">' + ingHtml + '</ul></section>' +
+      '<section class="detail-section"><h2 class="section-title">制作步骤</h2>' + stepsHtml + '</section>' +
+      '<div class="btn-row" style="margin-top:24px">' +
+      '<a href="/my/' + recipe.id + '/edit" class="btn btn-outline btn-block">编辑菜谱</a></div>';
+    initStepTimers(mount);
   }
 
   function createMyRecipeRow(recipe) {
     var wrap = document.createElement("div");
     wrap.className = "recipe-item my-recipe-item";
-    wrap.dataset.localRecipe = recipe.id;
+    wrap.dataset.recipeId = recipe.id;
     var stepCount = (recipe.steps && recipe.steps.length) || 0;
     var meta = (recipe.difficulty || "中等") + " · " + (recipe.prep_time || "30分钟") + " · " + stepCount + " 步";
     wrap.innerHTML =
@@ -352,6 +476,8 @@
   bindEditFormLocalSave();
   bindMyRecipeDelete();
   backupRecipeFromPage();
+  loadLocalRecipeIntoEditForm();
+  mountLocalRecipeDetail();
   restoreLocalRecipesToServer();
   mergeLocalRecipesIntoList();
 

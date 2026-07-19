@@ -150,6 +150,15 @@ def recipe_detail(recipe_id):
     recipe = get_my_recipe_by_id(recipe_id) if is_custom else get_recipe_by_id(recipe_id)
     if not recipe:
         recipe = get_recipe_by_id(recipe_id)
+    if not recipe and is_custom:
+        return render_template(
+            "detail.html",
+            recipe=None,
+            local_recipe_id=recipe_id,
+            cuisine=None,
+            is_custom=True,
+            back_url=url_for("my_recipes"),
+        )
     if not recipe:
         flash("菜谱未找到", "error")
         return redirect(url_for("recipes"))
@@ -159,6 +168,7 @@ def recipe_detail(recipe_id):
     return render_template(
         "detail.html",
         recipe=recipe,
+        local_recipe_id=None,
         cuisine=get_cuisine_by_id(recipe.cuisine),
         is_custom=is_custom or recipe.is_custom,
         back_url=back_url,
@@ -181,8 +191,7 @@ def my_recipe_new():
         try:
             save_my_recipe(recipe)
         except StorageError:
-            flash("服务器暂无法保存，请稍后重试（手机端会自动备份到本地）", "error")
-            return render_template("my_edit.html", recipe=None)
+            flash("云端暂不可用，请编辑后点「完成并退出」保存到本机", "error")
         return redirect(url_for("my_recipe_edit", recipe_id=recipe.id))
     return render_template("my_edit.html", recipe=None)
 
@@ -204,36 +213,40 @@ def api_sync_recipe():
 @app.route("/my/<recipe_id>/edit", methods=["GET", "POST"])
 def my_recipe_edit(recipe_id):
     recipe = get_my_recipe_by_id(recipe_id)
+    local_only = False
     if not recipe:
-        flash("菜谱不存在", "error")
-        return redirect(url_for("my_recipes"))
+        recipe = create_empty_recipe("未命名")
+        recipe.id = recipe_id
+        local_only = True
     if request.method == "POST":
+        local_only = get_my_recipe_by_id(recipe_id) is None
         draft = _recipe_from_form(recipe, request.form)
         if not draft.name:
             flash("请填写菜名", "error")
-            return render_template("my_edit.html", recipe=draft)
+            return render_template("my_edit.html", recipe=draft, local_only=local_only)
         ingredients = [x.strip() for x in request.form.getlist("ingredient") if x.strip()]
         steps = _parse_steps(request.form.getlist("step_desc"), request.form.getlist("step_dur"))
         if not ingredients:
             flash("请至少添加一项食材", "error")
-            return render_template("my_edit.html", recipe=draft)
+            return render_template("my_edit.html", recipe=draft, local_only=local_only)
         if not steps:
             flash("请至少添加一个步骤", "error")
-            return render_template("my_edit.html", recipe=draft)
+            return render_template("my_edit.html", recipe=draft, local_only=local_only)
         draft.ingredients = ingredients
         draft.steps = steps
         action = request.form.get("action", "save")
         try:
             save_my_recipe(draft)
             flash("菜谱已保存", "success")
+            local_only = False
         except StorageError:
-            flash("云端暂不可用，已依赖本机备份（请在浏览器中保存）", "error")
+            flash("已保存到本机，云端暂不可用", "success" if action == "done" else "error")
             if action != "done":
-                return render_template("my_edit.html", recipe=draft)
+                return render_template("my_edit.html", recipe=draft, local_only=True)
         if action == "done":
             return redirect(url_for("my_recipes"))
         return redirect(url_for("recipe_detail", recipe_id=draft.id, custom=1))
-    return render_template("my_edit.html", recipe=recipe)
+    return render_template("my_edit.html", recipe=recipe, local_only=local_only)
 
 
 @app.route("/my/<recipe_id>/delete", methods=["POST"])

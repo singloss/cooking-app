@@ -194,7 +194,17 @@ class TestWebRecipeFlow(unittest.TestCase):
         self.assertEqual(r2.status_code, 302)
         self.assertIn("/my", r2.headers["Location"])
 
-    def test_api_sync_recipe(self) -> None:
+    def test_local_detail_fallback(self) -> None:
+        recipe = storage.create_empty_recipe("本地详情")
+        recipe.ingredients = ["盐"]
+        recipe.steps = [Step(1, "搅拌", 2)]
+        storage.save_my_recipe(recipe)
+        r = self.client.get(f"/recipe/{recipe.id}?custom=1")
+        self.assertEqual(r.status_code, 200)
+        storage.delete_my_recipe(recipe.id)
+        r2 = self.client.get(f"/recipe/{recipe.id}?custom=1")
+        self.assertEqual(r2.status_code, 200)
+        self.assertIn("local-recipe-mount", r2.data.decode("utf-8"))
         recipe = storage.create_empty_recipe("同步测试")
         recipe.ingredients = ["盐"]
         recipe.steps = [Step(1, "煮", 5)]
